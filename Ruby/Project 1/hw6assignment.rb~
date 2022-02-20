@@ -1,0 +1,84 @@
+# University of Washington, Programming Languages, Homework 6, hw6runner.rb
+
+class MyPiece < Piece
+  
+  # Add the three new pieces. 
+  All_My_Pieces =
+    Piece::All_Pieces.concat(
+    [rotations([[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0]]),
+     [[[0, -2], [0, -1], [0, 0], [0, 1], [0, 2]], [[-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0]]],
+     rotations([[0, 0], [0, 1], [1, 0]])])
+
+  # next piece with the newly added three pieces.
+  def self.next_piece (board)
+    MyPiece.new(All_My_Pieces.sample, board)
+  end
+end
+                                              
+
+class MyBoard < Board
+
+  def initialize (game)
+    super
+    @cheat = false
+    @cheatPrice = 100
+    @current_block = MyPiece.next_piece(self)
+  end
+
+  # check if cheat, get the cheat piece if so.
+  def next_piece
+    super
+    if @cheat
+      @current_block = MyPiece.new([[[0, 0]]], self)
+      @cheat = false
+    end
+  end
+
+  def store_current
+    locations = @current_block.current_rotation
+    displacement = @current_block.position
+    (0..(locations.size - 1)).each{
+      |index| current = locations[index];
+      @grid[current[1]+displacement[1]][current[0]+displacement[0]] = 
+      @current_pos[index]}
+    remove_filled
+    @delay = [@delay - 2, 80].max
+  end
+
+  # Rotates the block by 180 degrees. 
+  def rotate_180_degrees
+    if !game_over? and @game.is_running?
+      @current_block.move(0, 0, 2)
+    end
+    draw
+  end
+
+  # Check if player is able to cheat.
+  def cheat_command
+    if !game_over? && !@cheat && @score > @cheatPrice
+      @cheat = true
+      @score -= @cheatPrice
+    end
+  end
+end
+
+class MyTetris < Tetris
+
+  # Add the keys for cheat command and rotate 180 degrees command.
+  def key_bindings
+    super
+    @root.bind('u', proc {@board.rotate_180_degrees})
+    @root.bind('c', proc {@board.cheat_command})
+  end
+
+  # Set the starting screen of the game.
+  def set_board
+    @canvas = TetrisCanvas.new
+    @board = MyBoard.new(self)
+    @canvas.place(@board.block_size * @board.num_rows + 3,
+                  @board.block_size * @board.num_columns + 6, 24, 80)
+    @board.draw
+  end
+end
+
+
